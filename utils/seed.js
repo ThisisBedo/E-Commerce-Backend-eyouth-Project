@@ -2,6 +2,8 @@ require('dotenv').config({ path: './.env' });
 const mongoose = require('mongoose');
 const Category = require('../models/Category');
 const Product = require('../models/Product');
+const Cart = require('../models/Cart');
+const Order = require('../models/Order');
 
 const seedData = async () => {
     try {
@@ -9,6 +11,8 @@ const seedData = async () => {
         
         await Category.deleteMany();
         await Product.deleteMany();
+        await Cart.deleteMany();
+        await Order.deleteMany();
 
         const tech = await Category.create({ name: 'Electronics' });
         const books = await Category.create({ name: 'Books' });

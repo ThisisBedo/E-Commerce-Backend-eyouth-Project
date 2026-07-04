@@ -10,6 +10,11 @@ exports.createOrder = async (req, res, next) => {
 
         let totalPrice = 0;
         const orderItems = cart.items.map(item => {
+            if (!item.productId) {
+                res.status(400);
+                throw new Error('Cart contains a product that no longer exists');
+            }
+
             const itemTotal = item.productId.price * item.quantity;
             totalPrice += itemTotal;
             return {

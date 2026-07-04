@@ -1,9 +1,11 @@
 {
   "name": "project",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "seed": "node utils/seed.js",
+    "test": "node --check server.js && node --check controllers/cartController.js && node --check controllers/orderController.js && node --check controllers/productController.js && node --check controllers/categoryController.js && node --check routes/cartRoutes.js && node --check routes/orderRoutes.js && node --check routes/productRoutes.js && node --check routes/categoryRoutes.js && node --check models/Product.js && node --check models/Category.js && node --check models/Cart.js && node --check models/Order.js && node --check utils/seed.js"
   },
   "keywords": [],
   "author": "",

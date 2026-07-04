@@ -6,7 +6,7 @@ const CartItemSchema = new mongoose.Schema({
 }, { _id: false });
 
 const CartSchema = new mongoose.Schema({
-    userId: { type: String, required: true, default: "guest_user" },
+    userId: { type: String, required: true, default: "guest_user", index: true },
     items: [CartItemSchema]
 }, { timestamps: true });
 
