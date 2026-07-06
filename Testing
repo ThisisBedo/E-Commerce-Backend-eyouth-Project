@@ -1,0 +1,7 @@
+GET  http://localhost:5000/api/products
+GET  http://localhost:5000/api/categories
+GET  http://localhost:5000/api/cart
+GET  http://localhost:5000/api/orders
+POST http://localhost:5000/api/cart
+PUT  http://localhost:5000/api/cart
+POST http://localhost:5000/api/orders
