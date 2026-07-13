@@ -1,16 +1,6 @@
 const Cart = require('../models/Cart');
 const Product = require('../models/Product');
-const mongoose = require('mongoose');
-
-const getRequestedQuantity = (quantity) => {
-    const parsedQuantity = Number(quantity);
-
-    if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1) {
-        return null;
-    }
-
-    return parsedQuantity;
-};
+const AppError = require('../utils/AppError');
 
 exports.getCart = async (req, res, next) => {
     try {
@@ -25,22 +15,11 @@ exports.getCart = async (req, res, next) => {
 exports.addToCart = async (req, res, next) => {
     try {
         const { productId, quantity } = req.body;
-        const qty = getRequestedQuantity(quantity === undefined ? 1 : quantity);
-
-        if (!mongoose.Types.ObjectId.isValid(productId)) {
-            res.status(400);
-            throw new Error('A valid productId is required');
-        }
-
-        if (!qty) {
-            res.status(400);
-            throw new Error('Quantity must be a whole number of at least 1');
-        }
+        const qty = quantity === undefined ? 1 : Number(quantity);
 
         const product = await Product.findById(productId);
         if (!product) {
-            res.status(404);
-            throw new Error('Product not found');
+            return next(new AppError('Product not found', 404));
         }
 
         let cart = await Cart.findOne({ userId: 'guest_user' });
@@ -61,28 +40,16 @@ exports.addToCart = async (req, res, next) => {
 exports.updateCartQuantity = async (req, res, next) => {
     try {
         const { productId, quantity } = req.body;
-        const qty = getRequestedQuantity(quantity);
-
-        if (!mongoose.Types.ObjectId.isValid(productId)) {
-            res.status(400);
-            throw new Error('A valid productId is required');
-        }
-
-        if (!qty) {
-            res.status(400);
-            throw new Error('Quantity must be a whole number of at least 1');
-        }
+        const qty = Number(quantity);
 
         const cart = await Cart.findOne({ userId: 'guest_user' });
         if (!cart) {
-            res.status(404);
-            throw new Error('Cart not found');
+            return next(new AppError('Cart not found', 404));
         }
 
         const itemIndex = cart.items.findIndex(item => item.productId.toString() === productId);
         if (itemIndex === -1) {
-            res.status(404);
-            throw new Error('Item not in cart');
+            return next(new AppError('Item not in cart', 404));
         }
 
         cart.items[itemIndex].quantity = qty;
@@ -95,15 +62,9 @@ exports.removeFromCart = async (req, res, next) => {
     try {
         const { productId } = req.params;
 
-        if (!mongoose.Types.ObjectId.isValid(productId)) {
-            res.status(400);
-            throw new Error('A valid productId is required');
-        }
-
         const cart = await Cart.findOne({ userId: 'guest_user' });
         if (!cart) {
-            res.status(404);
-            throw new Error('Cart not found');
+            return next(new AppError('Cart not found', 404));
         }
 
         cart.items = cart.items.filter(item => item.productId.toString() !== productId);

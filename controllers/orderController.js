@@ -1,29 +1,50 @@
 const Cart = require('../models/Cart');
 const Order = require('../models/Order');
+const Product = require('../models/Product');
+const AppError = require('../utils/AppError');
 
 exports.createOrder = async (req, res, next) => {
+    const decrementedProducts = [];
     try {
         const cart = await Cart.findOne({ userId: 'guest_user' }).populate('items.productId');
         if (!cart || cart.items.length === 0) {
-            return res.status(400).json({ message: 'Your cart is completely empty' });
+            return next(new AppError('Your cart is completely empty', 400));
         }
 
         let totalPrice = 0;
-        const orderItems = cart.items.map(item => {
+        const orderItems = [];
+
+        for (const item of cart.items) {
             if (!item.productId) {
-                res.status(400);
-                throw new Error('Cart contains a product that no longer exists');
+                throw new AppError('Cart contains a product that no longer exists', 400);
             }
 
-            const itemTotal = item.productId.price * item.quantity;
+            const product = item.productId;
+
+            // Atomically check stock and decrement quantity
+            const updatedProduct = await Product.findOneAndUpdate(
+                { _id: product._id, stock: { $gte: item.quantity }, isActive: { $ne: false } },
+                { $inc: { stock: -item.quantity } },
+                { new: true }
+            );
+
+            if (!updatedProduct) {
+                throw new AppError(`Insufficient stock or product unavailable for: ${product.name}`, 400);
+            }
+
+            // Track decremented products to rollback in case of subsequent failures
+            decrementedProducts.push({ productId: product._id, quantity: item.quantity });
+
+            const itemTotal = product.price * item.quantity;
             totalPrice += itemTotal;
-            return {
-                productId: item.productId._id,
-                name: item.productId.name,
-                price: item.productId.price,
+
+            orderItems.push({
+                productId: product._id,
+                name: product.name,
+                price: product.price,
                 quantity: item.quantity
-            };
-        });
+            });
+        }
 
         const order = await Order.create({
             userId: 'guest_user',
@@ -31,12 +52,20 @@ exports.createOrder = async (req, res, next) => {
             totalPrice: parseFloat(totalPrice.toFixed(2))
         });
 
-        // Clear cart items upon checkout integration completion
+        // Clear cart items upon checkout completion
         cart.items = [];
         await cart.save();
 
         res.status(201).json(order);
-    } catch (err) { next(err); }
+    } catch (err) {
+        // Rollback all successfully decremented stocks if any operation failed
+        for (const rolledBack of decrementedProducts) {
+            await Product.findByIdAndUpdate(rolledBack.productId, {
+                $inc: { stock: rolledBack.quantity }
+            });
+        }
+        next(err);
+    }
 };
 
 exports.getOrders = async (req, res, next) => {
